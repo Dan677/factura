@@ -101,7 +101,7 @@ if st.button("GENERATE PDF", type="primary", use_container_width=True):
     pdf.cell(40, 5, "SWIFT/BIC Code:"); pdf.cell(0, 5, "22233", ln=True)
 
     # Output ca bytes pentru Streamlit
-    pdf_bytes = pdf.output() 
+    pdf_bytes = bytes(pdf.output())
     
     st.success("✅ Factura a fost generată!")
     st.download_button(
@@ -111,4 +111,5 @@ if st.button("GENERATE PDF", type="primary", use_container_width=True):
         mime="application/pdf",
         use_container_width=True
     )
+
 
