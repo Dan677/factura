@@ -2,7 +2,11 @@ import streamlit as st
 from fpdf import FPDF
 from datetime import datetime
 
-# Clasa pentru PDF
+# --- 1. INIȚIALIZARE SESSION STATE (MEREU PRIMA) ---
+if 'items' not in st.session_state:
+    st.session_state.items = [{"desc": "50*20", "qty": 1.0, "rate": 1000.0}]
+
+# --- 2. CLASA PDF ---
 class FacturaPDF(FPDF):
     def header(self):
         self.set_font("helvetica", "B", 12)
@@ -18,7 +22,7 @@ class FacturaPDF(FPDF):
 st.set_page_config(page_title="Generator Facturi", layout="centered")
 st.title("📄 Pro Invoice Mobile")
 
-# Date principale
+# --- 3. DATE PRINCIPALE ---
 col1, col2 = st.columns(2)
 inv_nr = col1.text_input("INV Number", "31")
 date_val = col2.text_input("Date", datetime.now().strftime("%d %b %Y"))
@@ -27,14 +31,10 @@ client_email = col2.text_input("Client Email", "info@guestex.com")
 
 st.markdown("### Items")
 
-# Inițializare listă items dacă nu există
-if 'items' not in st.session_state:
-    st.session_state.items = [{"desc": "50*20", "qty": 1.0, "rate": 1000.0}]
-
-# Tabel coloane
+# --- 4. TABEL COLOANE ---
+# Acum linia de mai jos va funcționa garantat deoarece 'items' a fost definit la început
 for i, item in enumerate(st.session_state.items):
     c1, c2, c3 = st.columns([2, 1, 1])
-    # Adăugăm i+1 în label pentru a evita DuplicateWidgetID
     st.session_state.items[i]['desc'] = c1.text_input(f"Description {i+1}", value=item['desc'], key=f"d{i}")
     st.session_state.items[i]['qty'] = c2.number_input(f"Qty {i+1}", value=float(item['qty']), key=f"q{i}")
     st.session_state.items[i]['rate'] = c3.number_input(f"Rate £ {i+1}", value=float(item['rate']), key=f"r{i}")
@@ -50,12 +50,11 @@ if col_btns[1].button("🗑️ Clear All"):
 
 st.divider()
 
-# Generare PDF
+# --- 5. GENERARE PDF ---
 if st.button("GENERATE PDF", type="primary", use_container_width=True):
     pdf = FacturaPDF()
     pdf.add_page()
     
-    # Detalii Client în PDF
     pdf.set_y(40)
     pdf.set_font("helvetica", "B", 10)
     pdf.cell(0, 5, f"BILL TO: {client_name}", ln=True)
@@ -64,7 +63,6 @@ if st.button("GENERATE PDF", type="primary", use_container_width=True):
     pdf.cell(0, 5, f"Invoice Nr: {inv_nr}", ln=True)
     pdf.cell(0, 5, f"Date: {date_val}", ln=True)
     
-    # Header Tabel PDF
     pdf.set_y(70)
     pdf.set_fill_color(240, 240, 240)
     pdf.set_font("helvetica", "B", 9)
@@ -91,7 +89,6 @@ if st.button("GENERATE PDF", type="primary", use_container_width=True):
     pdf.cell(150, 10, "TOTAL GBP ", align="R")
     pdf.cell(40, 10, f"{total_general:.2f}", align="R")
     
-    # Date bancare
     pdf.ln(15)
     pdf.set_font("helvetica", "B", 10)
     pdf.cell(0, 5, "Payment Details", ln=True)
@@ -101,7 +98,6 @@ if st.button("GENERATE PDF", type="primary", use_container_width=True):
     pdf.cell(40, 5, "Account Number:"); pdf.cell(0, 5, "011", ln=True)
     pdf.cell(40, 5, "SWIFT/BIC Code:"); pdf.cell(0, 5, "22233", ln=True)
 
-    # Output corect ca bytes
     pdf_output = pdf.output()
     if isinstance(pdf_output, str):
         pdf_bytes = pdf_output.encode('latin-1')
