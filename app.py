@@ -34,9 +34,10 @@ if 'items' not in st.session_state:
 # Tabel coloane
 for i, item in enumerate(st.session_state.items):
     c1, c2, c3 = st.columns([2, 1, 1])
-    st.session_state.items[i]['desc'] = c1.text_input(f"Description", value=item['desc'], key=f"d{i}")
-    st.session_state.items[i]['qty'] = c2.number_input(f"Qty", value=float(item['qty']), key=f"q{i}")
-    st.session_state.items[i]['rate'] = c3.number_input(f"Rate (£)", value=float(item['rate']), key=f"r{i}")
+    # Adăugăm i+1 în label pentru a evita DuplicateWidgetID
+    st.session_state.items[i]['desc'] = c1.text_input(f"Description {i+1}", value=item['desc'], key=f"d{i}")
+    st.session_state.items[i]['qty'] = c2.number_input(f"Qty {i+1}", value=float(item['qty']), key=f"q{i}")
+    st.session_state.items[i]['rate'] = c3.number_input(f"Rate £ {i+1}", value=float(item['rate']), key=f"r{i}")
 
 col_btns = st.columns(2)
 if col_btns[0].button("➕ Add Row"):
@@ -87,7 +88,7 @@ if st.button("GENERATE PDF", type="primary", use_container_width=True):
         pdf.ln()
 
     pdf.set_font("helvetica", "B", 10)
-    pdf.cell(150, 10, "TOTAL GBP", align="R")
+    pdf.cell(150, 10, "TOTAL GBP ", align="R")
     pdf.cell(40, 10, f"{total_general:.2f}", align="R")
     
     # Date bancare
@@ -100,8 +101,12 @@ if st.button("GENERATE PDF", type="primary", use_container_width=True):
     pdf.cell(40, 5, "Account Number:"); pdf.cell(0, 5, "011", ln=True)
     pdf.cell(40, 5, "SWIFT/BIC Code:"); pdf.cell(0, 5, "22233", ln=True)
 
-    # Output ca bytes pentru Streamlit
-    pdf_bytes = bytes(pdf.output())
+    # Output corect ca bytes
+    pdf_output = pdf.output()
+    if isinstance(pdf_output, str):
+        pdf_bytes = pdf_output.encode('latin-1')
+    else:
+        pdf_bytes = pdf_output
     
     st.success("✅ Factura a fost generată!")
     st.download_button(
@@ -111,5 +116,3 @@ if st.button("GENERATE PDF", type="primary", use_container_width=True):
         mime="application/pdf",
         use_container_width=True
     )
-
-
