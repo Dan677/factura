@@ -2,7 +2,7 @@ import streamlit as st
 from fpdf import FPDF
 from datetime import datetime
 
-# 1. INIȚIALIZARE SESSION STATE (Trebuie să fie prima, înainte de orice afișare)
+# 1. INIȚIALIZARE SESSION STATE
 if 'rows' not in st.session_state:
     st.session_state.rows = [{"desc": "50*20", "qty": 1.0, "rate": 1000.0}]
 
@@ -20,7 +20,7 @@ class FacturaPDF(FPDF):
         self.cell(0, 10, "INVOICE  ", align="R", ln=True)
 
 # 3. CONFIGURARE PAGINĂ STREAMLIT
-st.set_page_config(page_title="Generator Facturi")
+st.set_page_config(page_title="Generator Facturi", page_icon="📄")
 st.title("📄 Pro Invoice Mobile")
 
 # 4. DATE PRINCIPALE
@@ -32,10 +32,9 @@ client_email = col2.text_input("Client Email", "info@guestex.com")
 
 st.markdown("### Produse")
 
-# 5. TABEL COLOANE (Acum va funcționa pentru că 'rows' este deja definit mai sus)
+# 5. TABEL PRODUSE DIN SESSION STATE
 for i, item in enumerate(st.session_state.rows):
     c1, c2, c3 = st.columns([3, 1, 1])
-    # Salvăm datele direct în session_state folosind indexul
     st.session_state.rows[i]['desc'] = c1.text_input(f"Description {i+1}", value=item['desc'], key=f"d{i}")
     st.session_state.rows[i]['qty'] = c2.number_input(f"Qty {i+1}", value=float(item['qty']), key=f"q{i}")
     st.session_state.rows[i]['rate'] = c3.number_input(f"Rate £ {i+1}", value=float(item['rate']), key=f"r{i}")
@@ -45,13 +44,13 @@ if st.button("➕ Add Row"):
     st.session_state.rows.append({"desc": "", "qty": 1.0, "rate": 0.0})
     st.rerun()
 
-# 6. GENERARE PDF
+# 6. GENERARE ȘI DESKĂRCARE PDF
 if st.button("GENERATE PDF", type="primary"):
     pdf = FacturaPDF()
     pdf.add_page()
     total_general = 0
     
-    # Detalii Bill To (Adăugate pentru a nu fi PDF-ul gol sus)
+    # Detalii Bill To
     pdf.set_y(40)
     pdf.set_font("helvetica", "B", 10)
     pdf.cell(0, 5, f"BILL TO: {client_name}", ln=True)
@@ -71,6 +70,7 @@ if st.button("GENERATE PDF", type="primary"):
     pdf.cell(40, 8, "Amount", border="B", fill=True, align="R")
     pdf.ln()
 
+    # Rânduri Produse
     for idx, item in enumerate(st.session_state.rows, 1):
         amount = item['qty'] * item['rate']
         total_general += amount
@@ -82,6 +82,7 @@ if st.button("GENERATE PDF", type="primary"):
         pdf.cell(40, 10, f"GBP {amount:.2f}", border="B", align="R")
         pdf.ln()
 
+    # Total
     pdf.set_font("helvetica", "B", 10)
     pdf.cell(150, 10, "TOTAL GBP ", align="R")
     pdf.cell(40, 10, f"{total_general:.2f}", align="R")
@@ -96,15 +97,24 @@ if st.button("GENERATE PDF", type="primary"):
     pdf.cell(40, 5, "Account Number:"); pdf.cell(0, 5, "011", ln=True)
     pdf.cell(40, 5, "SWIFT/BIC Code:"); pdf.cell(0, 5, "22233", ln=True)
 
-    # Generare corectă output bytes
-    pdf_output = pdf.output()
-    # Verificăm dacă output-ul este deja bytes sau string
-    pdf_bytes = pdf_output if isinstance(pdf_output, bytes) else bytes(pdf_output, 'latin-1')
-    
-    st.download_button(
-        label="📥 Download PDF", 
-        data=pdf_bytes, 
-        file_name=f"Factura_{inv_nr}.pdf",
-        mime="application/pdf",
-        use_container_width=True
-    )
+    # REPARARE EROARE: Conversie sigură pentru download_button
+    try:
+        # Folosim parametrul 'S' pentru a returna PDF-ul ca string/bytes direct
+        pdf_output = pdf.output(dest='S')
+        
+        # Dacă rezultatul este string (Python 3/fpdf vechi), îl codificăm în bytes
+        if isinstance(pdf_output, str):
+            pdf_bytes = pdf_output.encode('latin-1')
+        else:
+            pdf_bytes = pdf_output
+
+        st.success("PDF generat cu succes!")
+        st.download_button(
+            label="📥 Download PDF", 
+            data=pdf_bytes, 
+            file_name=f"Factura_{inv_nr}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+    except Exception as e:
+        st.error(f"Eroare la generarea fișierului: {e}")
