@@ -32,89 +32,83 @@ client_email = col2.text_input("Client Email", "info@guestex.com")
 
 st.markdown("### Produse")
 
-# 5. TABEL PRODUSE DIN SESSION STATE
+# 5. TABEL PRODUSE
 for i, item in enumerate(st.session_state.rows):
     c1, c2, c3 = st.columns([3, 1, 1])
     st.session_state.rows[i]['desc'] = c1.text_input(f"Description {i+1}", value=item['desc'], key=f"d{i}")
     st.session_state.rows[i]['qty'] = c2.number_input(f"Qty {i+1}", value=float(item['qty']), key=f"q{i}")
     st.session_state.rows[i]['rate'] = c3.number_input(f"Rate £ {i+1}", value=float(item['rate']), key=f"r{i}")
 
-# Buton adăugare rând
 if st.button("➕ Add Row"):
     st.session_state.rows.append({"desc": "", "qty": 1.0, "rate": 0.0})
     st.rerun()
 
-# 6. GENERARE ȘI DESKĂRCARE PDF
+# 6. GENERARE ȘI DESCARCARE PDF
 if st.button("GENERATE PDF", type="primary"):
-    pdf = FacturaPDF()
-    pdf.add_page()
-    total_general = 0
-    
-    # Detalii Bill To
-    pdf.set_y(40)
-    pdf.set_font("helvetica", "B", 10)
-    pdf.cell(0, 5, f"BILL TO: {client_name}", ln=True)
-    pdf.set_font("helvetica", "", 10)
-    pdf.cell(0, 5, f"Email: {client_email}", ln=True)
-    pdf.cell(0, 5, f"Invoice Nr: {inv_nr}", ln=True)
-    pdf.cell(0, 5, f"Date: {date_val}", ln=True)
+    try:
+        pdf = FacturaPDF()
+        pdf.add_page()
+        total_general = 0
+        
+        # Detalii Bill To
+        pdf.set_y(40)
+        pdf.set_font("helvetica", "B", 10)
+        pdf.cell(0, 5, f"BILL TO: {client_name}", ln=True)
+        pdf.set_font("helvetica", "", 10)
+        pdf.cell(0, 5, f"Email: {client_email}", ln=True)
+        pdf.cell(0, 5, f"Invoice Nr: {inv_nr}", ln=True)
+        pdf.cell(0, 5, f"Date: {date_val}", ln=True)
 
-    # Header Tabel PDF
-    pdf.set_y(80)
-    pdf.set_fill_color(240, 240, 240)
-    pdf.set_font("helvetica", "B", 9)
-    pdf.cell(10, 8, "#", border="B", fill=True)
-    pdf.cell(80, 8, "Item Description", border="B", fill=True)
-    pdf.cell(30, 8, "Qty", border="B", fill=True, align="C")
-    pdf.cell(30, 8, "Rate", border="B", fill=True, align="C")
-    pdf.cell(40, 8, "Amount", border="B", fill=True, align="R")
-    pdf.ln()
-
-    # Rânduri Produse
-    for idx, item in enumerate(st.session_state.rows, 1):
-        amount = item['qty'] * item['rate']
-        total_general += amount
-        pdf.set_font("helvetica", "", 9)
-        pdf.cell(10, 10, str(idx), border="B")
-        pdf.cell(80, 10, item['desc'], border="B")
-        pdf.cell(30, 10, f"{item['qty']:g}", border="B", align="C")
-        pdf.cell(30, 10, f"GBP {item['rate']:.2f}", border="B", align="C")
-        pdf.cell(40, 10, f"GBP {amount:.2f}", border="B", align="R")
+        # Tabel Produse
+        pdf.set_y(80)
+        pdf.set_fill_color(240, 240, 240)
+        pdf.set_font("helvetica", "B", 9)
+        pdf.cell(10, 8, "#", border="B", fill=True)
+        pdf.cell(80, 8, "Item Description", border="B", fill=True)
+        pdf.cell(30, 8, "Qty", border="B", fill=True, align="C")
+        pdf.cell(30, 8, "Rate", border="B", fill=True, align="C")
+        pdf.cell(40, 8, "Amount", border="B", fill=True, align="R")
         pdf.ln()
 
-    # Total
-    pdf.set_font("helvetica", "B", 10)
-    pdf.cell(150, 10, "TOTAL GBP ", align="R")
-    pdf.cell(40, 10, f"{total_general:.2f}", align="R")
-    
-    # Date bancare
-    pdf.ln(15)
-    pdf.set_font("helvetica", "B", 10)
-    pdf.cell(0, 5, "Payment Details", ln=True)
-    pdf.set_font("helvetica", "", 9)
-    pdf.cell(40, 5, "Bank Name:"); pdf.cell(0, 5, "Loyds", ln=True)
-    pdf.cell(40, 5, "Account Name:"); pdf.cell(0, 5, "Lc Popit", ln=True)
-    pdf.cell(40, 5, "Account Number:"); pdf.cell(0, 5, "011", ln=True)
-    pdf.cell(40, 5, "SWIFT/BIC Code:"); pdf.cell(0, 5, "22233", ln=True)
+        for idx, item in enumerate(st.session_state.rows, 1):
+            amount = item['qty'] * item['rate']
+            total_general += amount
+            pdf.set_font("helvetica", "", 9)
+            pdf.cell(10, 10, str(idx), border="B")
+            pdf.cell(80, 10, item['desc'], border="B")
+            pdf.cell(30, 10, f"{item['qty']:g}", border="B", align="C")
+            pdf.cell(30, 10, f"GBP {item['rate']:.2f}", border="B", align="C")
+            pdf.cell(40, 10, f"GBP {amount:.2f}", border="B", align="R")
+            pdf.ln()
 
-    # REPARARE EROARE: Conversie sigură pentru download_button
-    try:
-        # Folosim parametrul 'S' pentru a returna PDF-ul ca string/bytes direct
-        pdf_output = pdf.output(dest='S')
+        pdf.set_font("helvetica", "B", 10)
+        pdf.cell(150, 10, "TOTAL GBP ", align="R")
+        pdf.cell(40, 10, f"{total_general:.2f}", align="R")
         
-        # Dacă rezultatul este string (Python 3/fpdf vechi), îl codificăm în bytes
-        if isinstance(pdf_output, str):
-            pdf_bytes = pdf_output.encode('latin-1')
-        else:
-            pdf_bytes = pdf_output
+        # Date bancare
+        pdf.ln(15)
+        pdf.set_font("helvetica", "B", 10)
+        pdf.cell(0, 5, "Payment Details", ln=True)
+        pdf.set_font("helvetica", "", 9)
+        pdf.cell(40, 5, "Bank Name:"); pdf.cell(0, 5, "Loyds", ln=True)
+        pdf.cell(40, 5, "Account Name:"); pdf.cell(0, 5, "Lc Popit", ln=True)
+        pdf.cell(40, 5, "Account Number:"); pdf.cell(0, 5, "011", ln=True)
+        pdf.cell(40, 5, "SWIFT/BIC Code:"); pdf.cell(0, 5, "22233", ln=True)
 
-        st.success("PDF generat cu succes!")
+        # --- SOLUȚIA PENTRU EROAREA DE BINARY DATA ---
+        # Output sub formă de bytes direct
+        pdf_raw = pdf.output(dest='S')
+        
+        # Conversie forțată în obiectul 'bytes' pe care Streamlit îl adoră
+        final_pdf = bytes(pdf_raw)
+
+        st.success("PDF generat! Click mai jos pentru salvare:")
         st.download_button(
-            label="📥 Download PDF", 
-            data=pdf_bytes, 
+            label="📥 Download PDF Now", 
+            data=final_pdf, 
             file_name=f"Factura_{inv_nr}.pdf",
             mime="application/pdf",
             use_container_width=True
         )
     except Exception as e:
-        st.error(f"Eroare la generarea fișierului: {e}")
+        st.error(f"Eroare critică: {e}")
